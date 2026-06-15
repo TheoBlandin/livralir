@@ -2,7 +2,7 @@
 Fonctions utiles pour la fusion des résultats de recherche entre la BNF et OpenLibrary
 */
 
-import { Book, BookCandidate } from "@/types/books";
+import { BookCandidate, ISBN, Work } from "@/types/Work";
 
 interface MatchResult {
   score: number;
@@ -36,14 +36,11 @@ function tokenize(text: string): string[] {
 
 /**
  * Calcule la similarité entre deux tableaux de chaînes de caractères (https://fr.wikipedia.org/wiki/Indice_et_distance_de_Jaccard)
- * @param {string[]} aTokens Tableau de chaînes de caractères à comparer 
- * @param {string[]} bTokens Tableau de chaînes de caractères à comparer 
+ * @param {string[]} aTokens Tableau de chaînes de caractères à comparer
+ * @param {string[]} bTokens Tableau de chaînes de caractères à comparer
  * @returns {number} Indice de similarité, entre 0 et 1 où 1 indique deux chaînes de caractères identiques
  */
-function jaccardSimilarity(
-  aTokens: string[],
-  bTokens: string[],
-): number {
+function jaccardSimilarity(aTokens: string[], bTokens: string[]): number {
   const a = new Set(aTokens);
   const b = new Set(bTokens);
 
@@ -125,14 +122,11 @@ function titleSimilarity(titleA: string, titleB: string): number {
 
 /**
  * Compare les listes d'auteurs de deux livres
- * @param {string[]} authorsA Tableaux des auteurs du premier livre à comparer 
- * @param {string[]} authorsB Tableaux des auteurs du second livre à comparer 
- * @returns 
+ * @param {string[]} authorsA Tableaux des auteurs du premier livre à comparer
+ * @param {string[]} authorsB Tableaux des auteurs du second livre à comparer
+ * @returns
  */
-function authorSimilarity(
-  authorsA: string[],
-  authorsB: string[],
-): number {
+function authorSimilarity(authorsA: string[], authorsB: string[]): number {
   if (authorsA.length === 0 || authorsB.length === 0) {
     return 0;
   }
@@ -151,12 +145,39 @@ function authorSimilarity(
 }
 
 /**
+ * Compare les ISBN-10 et ISBN-13 de deux livres pour savoir si ce sont les mêmes
+ * @param {isbn_10: string | undefined; isbn_13: string | undefined} isbnA ISBN-10 et ISBN-13 du premier livre à comparer
+ * @param {isbn_10: string | undefined; isbn_13: string | undefined} isbnB Ensemble des ISBN-10 et ISBN-13 du second livre à comparer, qui est potentiellement déjà une fusion de livres
+ * @returns True si même livre, false sinon
+ */
+function ISBNMatch(
+  isbnA: { isbn_10: string | undefined; isbn_13: string | undefined },
+  isbnBArray: ISBN[],
+): boolean {
+  let match = false;
+
+  for (const isbnB of isbnBArray) {
+    if (!match) {
+      match =
+        (isbnA.isbn_10 == isbnB.isbn_10.value &&
+          isbnA.isbn_10 != undefined &&
+          isbnB.isbn_10.value != undefined) ||
+        (isbnA.isbn_13 == isbnB.isbn_13.value &&
+          isbnA.isbn_13 != undefined &&
+          isbnB.isbn_13.value != undefined);
+    }
+  }
+
+  return match;
+}
+
+/**
  * Compare deux livres via leurs titres et leurs auteurs
- * @param {BookCandidate} a Premier livre à comparer 
- * @param {Book} b Second livre à comparer
+ * @param {BookCandidate} a Premier livre à comparer
+ * @param {Work} b Second livre à comparer
  * @returns {MatchResult} Résultat de la comparaison
  */
-function computeMatchScore(a: BookCandidate, b: Book): MatchResult {
+function computeMatchScore(a: BookCandidate, b: Work): MatchResult {
   const titleScore = titleSimilarity(a.title ?? "", b.title ?? "");
 
   const authorScore = authorSimilarity(a.authors ?? [], b.authors ?? []);
@@ -172,21 +193,33 @@ function computeMatchScore(a: BookCandidate, b: Book): MatchResult {
 
 /**
  * Cherche dans la liste des livres existants une correspondance avec le livre candidat
- * @param {BookCandidate} candidate Livre candidat 
+ * @param {BookCandidate} candidate Livre candidat
  * @param {BookCandidate[]} existing Liste des livres existants
  * @returns {match: BookCandidate | null, score: number} Meilleur candidat et score de correspondance
  */
-function findBestMatch(candidate: BookCandidate, existing: Book[]) {
-  let bestMatch: Book | null = null;
+function findBestMatch(candidate: BookCandidate, existing: Work[]) {
+  let bestMatch: Work | null = null;
 
   let bestScore = 0;
 
   for (const book of existing) {
-    const result = computeMatchScore(candidate, book);
+    if (bestScore != 1) {
+      if (
+        ISBNMatch(
+          { isbn_10: candidate.isbn_10, isbn_13: candidate.isbn_13 },
+          book.isbn,
+        )
+      ) {
+        bestScore = 1;
+        bestMatch = book;
+      } else {
+        const result = computeMatchScore(candidate, book);
 
-    if (result.score > bestScore) {
-      bestScore = result.score;
-      bestMatch = book;
+        if (result.score > bestScore) {
+          bestScore = result.score;
+          bestMatch = book;
+        }
+      }
     }
   }
 
@@ -198,64 +231,138 @@ function findBestMatch(candidate: BookCandidate, existing: Book[]) {
 
 /**
  * Créé un nouveau objet Book à partir d'un candidat
- * @param {BookCandidate} candidate Livre candidat à partir duquel un nouveau livre est créé 
+ * @param {BookCandidate} candidate Livre candidat à partir duquel un nouveau livre est créé
  * @param {"openlibrary" | "bnf"} source Source du nouveau livre
- * @returns {Book} Nouveau livre créé
+ * @returns {Work} Nouveau livre créé
  */
-function createBook(
-  candidate: BookCandidate,
-): Book {
+function createBook(candidate: BookCandidate): Work {
   return {
     title: candidate.title,
     subtitle: candidate.subtitle,
     authors: [...(candidate.authors ?? [])],
     series_name: candidate.series_name,
     series_position: candidate.series_position,
-    isbn: candidate.isbn,
+    isbn: [
+      {
+        isbn_10: {
+          value: candidate.isbn_10,
+          source: candidate.source,
+        },
+        isbn_13: {
+          value: candidate.isbn_13,
+          source: candidate.source,
+        },
+      },
+    ],
+    cover: candidate.cover_id
+      ? {
+          small:
+            "https://covers.openlibrary.org/b/id/" +
+            candidate.cover_id +
+            "-S.jpg",
+          medium:
+            "https://covers.openlibrary.org/b/id/" +
+            candidate.cover_id +
+            "-M.jpg",
+          large:
+            "https://covers.openlibrary.org/b/id/" +
+            candidate.cover_id +
+            "-L.jpg",
+        }
+      : undefined,
     source: candidate.source,
   };
 }
 
 /**
  * Fusionne un livre existant avec le livre candidat
- * @param {Book} existing Livre déjà existant
+ * @param {Work} existing Livre déjà existant
  * @param {BookCandidate} candidate Livre candidat
- * @param source 
+ * @param source
  */
-function mergeBook(
-  existing: Book,
-  candidate: BookCandidate,
-) {
+function mergeBook(existing: Work, candidate: BookCandidate) {
+  // Fusionner les sources
+  if (existing.source != "both" && existing.source != candidate.source) {
+    existing.source = "both";
+  }
+
+  // Fusionner les ISBN
+  const match = existing.isbn.find((item) => {
+    const same10 =
+      candidate.isbn_10 && item.isbn_10.value === candidate.isbn_10;
+    const same13 =
+      candidate.isbn_13 && item.isbn_13.value === candidate.isbn_13;
+
+    return same10 || same13;
+  });
+
+  if (match) {
+    // correspondance trouvée
+    if (candidate.isbn_10) {
+      // ISBN-10 définit dans candidat
+      if (match.isbn_10.value === candidate.isbn_10) {
+        // ISBN-10 présents dans les deux
+        match.isbn_10.source = "both";
+      } else if (!match.isbn_10) {
+        // ISBN-10 manquant dans l'existant
+        match.isbn_10 = {
+          value: candidate.isbn_10,
+          source: candidate.source,
+        };
+      }
+    }
+
+    if (candidate.isbn_13) {
+      // ISBN-13 définit dans candidat
+      if (match.isbn_13?.value === candidate.isbn_13) {
+        // ISBN-13 présents dans les deux
+        match.isbn_13.source = "both";
+      } else if (!match.isbn_13) {
+        // ISBN-13 manquant dans l'existant
+        match.isbn_13 = {
+          value: candidate.isbn_13,
+          source: candidate.source,
+        };
+      }
+    }
+  } else {
+    // pas de correspondance, un créé un nouvel objet
+    const newISBN: ISBN = {
+      isbn_10: {
+        value: candidate.isbn_10,
+        source: candidate.source,
+      },
+      isbn_13: {
+        value: candidate.isbn_13,
+        source: candidate.source,
+      },
+    };
+    existing.isbn.push(newISBN);
+  }
+
+  // Fusionner les infos de séries
+  if (!existing.series_name && candidate.series_name) { // Nom de la série manquant dans l'existant mais définit dans le candidat
+    existing.series_name = candidate.series_name;
+  }
+  if (!existing.series_position && candidate.series_position) { // Position dans la série manquant dans l'existant mais définit dans le candidat
+    existing.series_position = candidate.series_position;
+  }
+
+
   // existing.authors = [
   //   ...new Set([
   //     ...existing.authors,
   //     ...candidate.authors
   //   ])
   // ];
-  // existing.isbns = [
-  //   ...new Set([
-  //     ...existing.isbns,
-  //     ...candidate.isbns
-  //   ])
-  // ];
 }
 
 /**
  * Insère dans la liste des livres existants un nouveau livre, soit en le fusionnant avec un livre existant via mergeBook(), soit en créant une nouvelle entrée via createBook()
- * @param {Book[]} catalog Liste des livres existants
+ * @param {Work[]} catalog Liste des livres existants
  * @param {BookCandidate} candidate Nouveau livre à insérer
  */
-export function insertBook(
-  catalog: Book[],
-  candidate: BookCandidate,
-) {
-//   const existingCandidates: BookCandidate[] = catalog.map((book) => ({
-//     title: book.title,
-//     subtitle: book.subtitle,
-//     authors: book.authors,
-//     isbn: book.isbn,
-//   }));
-
+export function insertBook(catalog: Work[], candidate: BookCandidate) {
   const result = findBestMatch(candidate, catalog);
 
   if (result.match && result.score >= 0.9) {

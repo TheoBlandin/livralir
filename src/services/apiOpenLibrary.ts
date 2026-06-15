@@ -14,7 +14,7 @@ Search API (API de recherche) : https://openlibrary.org/dev/docs/api/search
 export async function searchBookOpenLibrary(title: string) {
   const query = title.trim().replace(/\s+/g, "+");
 
-  const url = `https://openlibrary.org/search.json?q=${query}&language=fre&fields=key,author_name,editions,editions.key,series_name,series_position,editions.title,editions.subtitle,editions.publisher,editions.language,editions.isbn&limit=10&mode=everything`;
+  const url = `https://openlibrary.org/search.json?q=${query}&fields=key,author_name,editions,editions.key,series_name,series_position,editions.title,editions.subtitle,editions.publisher,editions.language,editions.isbn,editions.cover_i&limit=10&mode=everything&lang=fr`;
 
   console.log(">>> URL OpenLibrary : ", url); // à supprimer
 
