@@ -1,13 +1,28 @@
 import { Colors } from "@/constants/Colors";
-import { Work } from "@/types/Work";
-import { Pressable, View, StyleSheet, ImageBackground } from "react-native";
-import TextComponent from "./Text";
+import { useStore } from "@/store/useStore";
+import { BookOverview } from "@/types/Work";
+import { router } from "expo-router";
+import { ImageBackground, Pressable, StyleSheet, View } from "react-native";
+import Text from "../Text";
 
-export default function Book({ book }: { book: Work }) {
+type BookVariant = "list";
+
+export default function BookPressable({
+  book,
+  variant,
+}: {
+  book: BookOverview;
+  variant: BookVariant;
+}) {
   const cover = book.cover ? { uri: book.cover!.medium } : undefined;
 
+  function handleSelectItem() {
+    useStore.getState().setSelectedItem(book);
+    router.push("/bookPage");
+  }
+
   return (
-    <Pressable style={styles.card}>
+    <Pressable onPress={handleSelectItem} style={styles.card}>
       <View style={styles.coverContainer}>
         {cover && (
           <ImageBackground
@@ -19,51 +34,51 @@ export default function Book({ book }: { book: Work }) {
       </View>
       <View style={styles.info}>
         <View>
-          {book.series_name &&
+          {book.series_name != undefined &&
             (book.series_position ? (
-              <TextComponent color="quiet" variant="small">
+              <Text color="quiet" variant="small">
                 #{book.series_position} {book.series_name}
-              </TextComponent>
+              </Text>
             ) : (
-              <TextComponent color="quiet" variant="small">
+              <Text color="quiet" variant="small">
                 {book.series_name}
-              </TextComponent>
+              </Text>
             ))}
           {book.subtitle ? (
-            <TextComponent weight="bold">
+            <Text weight="bold">
               {book.title} : {book.subtitle}
-            </TextComponent>
+            </Text>
           ) : (
-            <TextComponent weight="bold">{book.title}</TextComponent>
+            <Text weight="bold">{book.title}</Text>
           )}
           {book.authors?.map((author, i) => (
-            <TextComponent color="quiet" variant="small" key={`${author}-${i}`}>
+            <Text color="quiet" variant="small" key={`${author}-${i}`}>
               {author}
               {i < book.authors!.length - 1 ? ", " : ""}
-            </TextComponent>
+            </Text>
           ))}
         </View>
 
         {/* à supprimer */}
         <View>
-          <TextComponent color="quiet" variant="small">
+          <Text color="quiet" variant="small">
             Source : {book.source}
-          </TextComponent>
+          </Text>
           {/* {book.isbn.map((isbn, i) => (
             <View key={`${book.title}-isbn-${i}`}>
-              <TextComponent color="quiet" variant="small">
+              <Text color="quiet" variant="small">
                 ---
-              </TextComponent>
-              <TextComponent color="quiet" variant="small">
+              </Text>
+              <Text color="quiet" variant="small">
                 ISBN-10 :{" "}
                 {isbn.isbn_10.value &&
                   `${isbn.isbn_10.value} (${isbn.isbn_10.source})`}
-              </TextComponent>
-              <TextComponent color="quiet" variant="small">
+              </Text>
+              <Text color="quiet" variant="small">
                 ISBN-13 :{" "}
                 {isbn.isbn_13.value &&
                   `${isbn.isbn_13.value} (${isbn.isbn_13.source})`}
-              </TextComponent>
+              </Text>
             </View>
           ))} */}
         </View>
@@ -83,6 +98,7 @@ const styles = StyleSheet.create({
     width: 87,
     height: 139,
     borderRadius: 4,
+    overflow: "hidden",
   },
   cover: {
     width: 87,

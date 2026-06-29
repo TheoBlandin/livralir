@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet } from "react-native";
 
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   getField,
@@ -10,24 +10,23 @@ import {
   searchBookBNF,
 } from "@/services/apiBNF";
 
-import Book from "@/components/Book";
+import BookPressable from "@/components/Book/BookPressable";
+import Divider from "@/components/Divider";
 import Searchbar from "@/components/Searchbar";
-import TextComponent from "@/components/Text";
+import Text from "@/components/Text";
 import { Colors } from "@/constants/Colors";
 import { searchBookOpenLibrary } from "@/services/apiOpenLibrary";
-import { BookCandidate, Work } from "@/types/Work";
+import { BookCandidate, BookOverview } from "@/types/Work";
 import { insertBook } from "@/utils/mergeBooksResults";
 
 export default function Index() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [BNFBooks, setBNFBooks] = useState<BookCandidate[]>([]); // à supprimer
   const [openLibraryBooks, setOpenLibraryBooks] = useState<BookCandidate[]>([]); // à supprimer
-  const [catalog, setCatalog] = useState<Work[]>([]);
-
-  const insets = useSafeAreaInsets();
+  const [catalog, setCatalog] = useState<BookOverview[]>([]);
 
   async function fetchResult() {
-    const newCatalog: Work[] = [];
+    const newCatalog: BookOverview[] = [];
 
     // OpenLibrary
     const resultOpenLibrary = await searchBookOpenLibrary(searchQuery);
@@ -66,13 +65,17 @@ export default function Index() {
       const candidate: BookCandidate = {
         isbn_10,
         isbn_13,
-        title: doc.editions.docs[0].title,
-        subtitle: doc.editions.docs[0].subtitle,
+        title: String(doc.editions.docs[0].title),
+        subtitle: doc.editions.docs[0].subtitle
+          ? String(doc.editions.docs[0].subtitle)
+          : undefined,
         authors: doc.author_name,
-        series_name: doc.series_name ? doc.series_name[0] : null,
-        series_position: doc.series_position ? doc.series_position[0] : null,
-        cover_id: doc.editions.docs[0].cover_i,
+        series_name: doc.series_name ? String(doc.series_name[0]) : undefined,
+        series_position: doc.series_position
+          ? doc.series_position[0]
+          : undefined,
         source: "openlibrary",
+        id: doc.key,
       };
 
       OpenLibraryCandidates.push(candidate); // à supprimer
@@ -93,7 +96,7 @@ export default function Index() {
 
     const BNFCandidates: BookCandidate[] = []; // à supprimer
     for (const record of records) {
-      let isbn: string = String(getSubfield(getField(record, "010"), "a"));
+      let isbn = getSubfield(getField(record, "010"), "a");
       let isbn_10 = undefined;
       let isbn_13 = undefined;
 
@@ -116,7 +119,7 @@ export default function Index() {
 
       const authors = [];
 
-      for (const tag of ["700", "701", "703"]) {
+      for (const tag of ["700", "701", "702", "703"]) {
         for (const field of getFields(record, tag)) {
           const role = getSubfield(field, "4");
 
@@ -139,12 +142,13 @@ export default function Index() {
       const candidate: BookCandidate = {
         isbn_10,
         isbn_13,
-        title,
-        subtitle,
+        title: title ? String(title) : undefined,
+        subtitle: subtitle ? String(subtitle) : undefined,
         authors,
-        series_name,
-        series_position,
+        series_name: series_name ? String(series_name) : undefined,
+        series_position: series_position ? String(series_position) : undefined,
         source: "bnf",
+        id: record["srw:recordData"]["mxc:record"]["@_id"],
       };
       BNFCandidates.push(candidate); // à supprimer
 
@@ -152,118 +156,36 @@ export default function Index() {
     }
     setBNFBooks(BNFCandidates); // à supprimer
 
-    setCatalog(newCatalog);
+    const filteredCatalog: BookOverview[] = newCatalog.filter(
+      (work) => work.source != "bnf",
+    );
+    setCatalog(filteredCatalog);
   }
 
   return (
-    <ScrollView
-      style={{ backgroundColor: Colors.surface.default }}
-      contentContainerStyle={[styles.container, { paddingTop: insets.top }]}
-    >
+    <SafeAreaView style={styles.container}>
       <Searchbar
         value={searchQuery}
         onType={setSearchQuery}
         onSearch={fetchResult}
       />
 
-      <View style={styles.resultContainer}>
-        {catalog.length !== 0 ? (
-          catalog.map((book, i) => <Book key={`book-${i}`} book={book} />)
-        ) : (
-          <TextComponent>Aucun résultat</TextComponent>
-        )}
-      </View>
-
-      {/* <TextComponent variant="large">API OpenLibrary</TextComponent>
-      <View style={styles.resultContainer}>
-        {openLibraryBooks.map((book, i) => (
-          <View key={i + "-openLibrary"} style={styles.booksResult}>
-            {book.series_name && (
-              <TextComponent variant="small">
-                #{book.series_position ?? "?"} {book.series_name}
-              </TextComponent>
-            )}
-            {book.subtitle ? (
-              <TextComponent>
-                {book.title} : {book.subtitle}
-              </TextComponent>
-            ) : (
-              <TextComponent>{book.title}</TextComponent>
-            )}
-            <View style={styles.subInfo}>
-              {book.authors?.map((author, i) => (
-                <TextComponent key={`${author}-${i}`}>
-                  {author}
-                  {i < book.authors!.length - 1 ? ", " : ""}
-                </TextComponent>
-              ))}
-            </View>
-            <TextComponent variant="small">
-              ISBN 10 : {book.isbn_10}
-            </TextComponent>
-            <TextComponent variant="small">
-              ISBN 13 : {book.isbn_13}
-            </TextComponent>
-          </View>
-        ))}
-      </View>
-
-      <Text>API BNF</Text>
-      <View style={styles.resultContainer}>
-        {BNFBooks.map((book, i) => (
-          <View key={i + "-BNF"} style={styles.booksResult}>
-            {book.series_name &&
-              (book.series_position ? (
-                <Text>
-                  #{book.series_position} {book.series_name}
-                </Text>
-              ) : (
-                <Text>{book.series_name}</Text>
-              ))}
-            {book.subtitle ? (
-              <Text>
-                {book.title} : {book.subtitle}
-              </Text>
-            ) : (
-              <Text>{book.title}</Text>
-            )}
-            <View style={styles.subInfo}>
-              {book.authors?.map((author, i) => (
-                <Text key={`${author}-${i}`}>
-                  {author}
-                  {i < book.authors!.length - 1 ? ", " : ""}
-                </Text>
-              ))}
-            </View>
-            <Text>ISBN 10 : {book.isbn_10}</Text>
-            <Text>ISBN 13 : {book.isbn_13}</Text>
-          </View>
-        ))}
-      </View> */}
-    </ScrollView>
+      <FlatList
+        data={catalog}
+        renderItem={({ item }) => <BookPressable book={item} variant="list" />}
+        keyExtractor={(item, index) => `book-${index}`}
+        ItemSeparatorComponent={<Divider margin={16} />}
+        ListEmptyComponent={<Text>Aucun résultat</Text>}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 12,
     gap: 12,
-  },
-  resultContainer: {
-    display: "flex",
-    gap: 8,
-    flexDirection: "column",
-  },
-  booksResult: {
-    backgroundColor: "#FEFEFE",
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    marginInline: 12,
-  },
-  subInfo: {
-    display: "flex",
-    flexDirection: "row",
-    gap: 4,
+    backgroundColor: Colors.surface.default,
+    flex: 1,
+    paddingHorizontal: 16,
   },
 });

@@ -6,20 +6,28 @@ export type BookCandidate = {
   authors?: string[];
   series_name?: string;
   series_position?: string;
-  cover_id?: string;
   source: "openlibrary" | "bnf";
+  id: string;
 };
 
-export type ISBN = {
-  isbn_10: {
-    value?: string;
-    source: "openlibrary" | "bnf" | "both";
-  };
-  isbn_13: {
-    value?: string;
-    source: "openlibrary" | "bnf" | "both";
-  };
-};
+// export type ISBN = {
+//   isbn_10: {
+//     value?: string;
+//     source: "openlibrary" | "bnf" | "both";
+//     id: {
+//       openLibrary?: string;
+//       bnf?: string;
+//     };
+//   };
+//   isbn_13: {
+//     value?: string;
+//     source: "openlibrary" | "bnf" | "both";
+//     id: {
+//       openLibrary?: string;
+//       bnf?: string;
+//     };
+//   };
+// };
 
 export type Cover = {
   small: string;
@@ -27,13 +35,25 @@ export type Cover = {
   large: string;
 };
 
-export type Work = {
-  isbn: ISBN[];
+export type Edition = {
+  id: {
+    openLibrary?: string;
+    bnf?: string;
+  };
+  isbn: {
+    isbn_10?: string;
+    isbn_13?: string;
+  }
+};
+
+export type BookOverview = {
   title?: string;
   subtitle?: string;
   authors?: string[];
   series_name?: string;
   series_position?: string;
   cover?: Cover;
+  currentEdition: Edition;
+  editions: Edition[];
   source: "openlibrary" | "bnf" | "both";
 };

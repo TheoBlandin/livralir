@@ -6,6 +6,9 @@ import {
 } from "@expo-google-fonts/geist";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import { Colors } from "@/constants/Colors";
+import { StyleSheet } from "react-native";
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -20,10 +23,12 @@ export default function RootLayout() {
   }, [loaded, error]);
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false, 
-      }}
-    ></Stack>
+    <SafeAreaProvider>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      ></Stack>
+    </SafeAreaProvider>
   );
 }

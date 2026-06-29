@@ -1,9 +1,4 @@
-import {
-  TextInput,
-  StyleSheet,
-  Pressable,
-  View,
-} from "react-native";
+import { TextInput, StyleSheet, Pressable, View } from "react-native";
 
 import { Search, X } from "lucide-react-native";
 import { useRef, useState } from "react";
@@ -23,15 +18,10 @@ export default function Searchbar({
 
   const [isFocused, setIsFocused] = useState(false);
 
-  const focusInput = () => {
-    inputRef.current?.focus();
-  };
-
   return (
-    <View
+    <Pressable
       style={[styles.searchbar, isFocused && styles.searchbarFocused]}
-      onStartShouldSetResponder={() => true}
-      onResponderRelease={focusInput}
+      onPress={() => inputRef.current?.focus()}
     >
       <Search size={20} color={Colors.text.default.default} />
       <TextInput
@@ -59,7 +49,7 @@ export default function Searchbar({
           <X size={20} color={Colors.text.default.default} />
         </Pressable>
       )}
-    </View>
+    </Pressable>
   );
 }
 
@@ -69,7 +59,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     backgroundColor: Colors.surface.default,
     borderRadius: 8,
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
