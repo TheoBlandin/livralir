@@ -1,8 +1,7 @@
 /*
 Fonctions utiles pour la fusion des résultats de recherche entre la BNF et OpenLibrary
 */
-
-import { BookCandidate, BookOverview, Edition } from "@/types/Work";
+import { BookCandidate, BookOverview, Cover, Edition } from "@/types/Work";
 
 interface MatchResult {
   score: number;
@@ -131,7 +130,6 @@ function titleSimilarity(titleA: string, titleB: string): number {
  * @returns
  */
 function authorSimilarity(authorsA: string[], authorsB: string[]): number {
-  
   if (authorsA.length === 0 || authorsB.length === 0) {
     return 0;
   }
@@ -240,52 +238,44 @@ function findBestMatch(candidate: BookCandidate, existing: BookOverview[]) {
  * @returns {BookOverview} Nouveau livre créé
  */
 function createBook(candidate: BookCandidate): BookOverview {
+  const edition = {
+    id: {
+      openLibrary: candidate.source == "openlibrary" ? candidate.id : undefined,
+      bnf: candidate.source == "bnf" ? candidate.id : undefined,
+    },
+    isbn: {
+      isbn_10: candidate.isbn_10,
+      isbn_13: candidate.isbn_13,
+    },
+    cover:
+      (candidate.isbn_10 ?? candidate.isbn_13)
+        ? {
+            small:
+              "https://covers.openlibrary.org/b/isbn/" +
+              (candidate.isbn_10 ?? candidate.isbn_13) +
+              "-S.jpg?default=false",
+            medium:
+              "https://covers.openlibrary.org/b/isbn/" +
+              (candidate.isbn_10 ?? candidate.isbn_13) +
+              "-M.jpg?default=false",
+            large:
+              "https://covers.openlibrary.org/b/isbn/" +
+              (candidate.isbn_10 ?? candidate.isbn_13) +
+              "-L.jpg?default=false",
+          }
+        : undefined,
+  };
+
   return {
     title: candidate.title,
     subtitle: candidate.subtitle,
     authors: [...(candidate.authors ?? [])],
     series_name: candidate.series_name,
     series_position: candidate.series_position,
-    currentEdition: {
-      id: {
-        openLibrary:
-          candidate.source == "openlibrary" ? candidate.id : undefined,
-        bnf: candidate.source == "bnf" ? candidate.id : undefined,
-      },
-      isbn: {
-        isbn_10: candidate.isbn_10,
-        isbn_13: candidate.isbn_13,
-      },
-    },
+    current_edition: edition,
     editions: [
-      {
-        id: {
-          openLibrary:
-            candidate.source == "openlibrary" ? candidate.id : undefined,
-          bnf: candidate.source == "bnf" ? candidate.id : undefined,
-        },
-        isbn: {
-          isbn_10: candidate.isbn_10,
-          isbn_13: candidate.isbn_13,
-        },
-      },
+      edition
     ],
-    cover: (candidate.isbn_10 ?? candidate.isbn_13)
-      ? {
-          small:
-            "https://covers.openlibrary.org/b/isbn/" +
-            (candidate.isbn_10 ?? candidate.isbn_13) +
-            "-S.jpg",
-          medium:
-            "https://covers.openlibrary.org/b/isbn/" +
-            (candidate.isbn_10 ?? candidate.isbn_13) +
-            "-M.jpg",
-          large:
-            "https://covers.openlibrary.org/b/isbn/" +
-            (candidate.isbn_10 ?? candidate.isbn_13) +
-            "-L.jpg",
-        }
-      : undefined,
     source: candidate.source,
   };
 }
@@ -343,6 +333,23 @@ function mergeBook(existing: BookOverview, candidate: BookCandidate) {
         isbn_10: candidate.isbn_10,
         isbn_13: candidate.isbn_13,
       },
+      cover:
+        (candidate.isbn_10 ?? candidate.isbn_13)
+          ? {
+              small:
+                "https://covers.openlibrary.org/b/isbn/" +
+                (candidate.isbn_10 ?? candidate.isbn_13) +
+                "-S.jpg?default=false",
+              medium:
+                "https://covers.openlibrary.org/b/isbn/" +
+                (candidate.isbn_10 ?? candidate.isbn_13) +
+                "-M.jpg?default=false",
+              large:
+                "https://covers.openlibrary.org/b/isbn/" +
+                (candidate.isbn_10 ?? candidate.isbn_13) +
+                "-L.jpg?default=false",
+            }
+          : undefined,
     };
 
     existing.editions.push(newEdition);

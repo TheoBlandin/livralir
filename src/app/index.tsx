@@ -21,8 +21,6 @@ import { insertBook } from "@/utils/mergeBooksResults";
 
 export default function Index() {
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [BNFBooks, setBNFBooks] = useState<BookCandidate[]>([]); // à supprimer
-  const [openLibraryBooks, setOpenLibraryBooks] = useState<BookCandidate[]>([]); // à supprimer
   const [catalog, setCatalog] = useState<BookOverview[]>([]);
 
   async function fetchResult() {
@@ -31,7 +29,6 @@ export default function Index() {
     // OpenLibrary
     const resultOpenLibrary = await searchBookOpenLibrary(searchQuery);
 
-    const OpenLibraryCandidates: BookCandidate[] = []; // à supprimer
     for (const doc of resultOpenLibrary.docs) {
       const arrayISBN = doc.editions.docs[0].isbn; // tableau des ISBN
       let isbn_10 = undefined;
@@ -78,11 +75,8 @@ export default function Index() {
         id: doc.key,
       };
 
-      OpenLibraryCandidates.push(candidate); // à supprimer
-
       insertBook(newCatalog, candidate); // ajouter le livre au catalogue
     }
-    setOpenLibraryBooks(OpenLibraryCandidates); // à supprimer
 
     // BNF
     const resultBNF = await searchBookBNF(searchQuery);
@@ -94,7 +88,6 @@ export default function Index() {
         ? [rawRecords]
         : [];
 
-    const BNFCandidates: BookCandidate[] = []; // à supprimer
     for (const record of records) {
       let isbn = getSubfield(getField(record, "010"), "a");
       let isbn_10 = undefined;
@@ -150,11 +143,9 @@ export default function Index() {
         source: "bnf",
         id: record["srw:recordData"]["mxc:record"]["@_id"],
       };
-      BNFCandidates.push(candidate); // à supprimer
 
       insertBook(newCatalog, candidate);
     }
-    setBNFBooks(BNFCandidates); // à supprimer
 
     const filteredCatalog: BookOverview[] = newCatalog.filter(
       (work) => work.source != "bnf",

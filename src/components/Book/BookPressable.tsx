@@ -4,6 +4,7 @@ import { BookOverview } from "@/types/Work";
 import { router } from "expo-router";
 import { ImageBackground, Pressable, StyleSheet, View } from "react-native";
 import Text from "../Text";
+import { useState } from "react";
 
 type BookVariant = "list";
 
@@ -14,23 +15,29 @@ export default function BookPressable({
   book: BookOverview;
   variant: BookVariant;
 }) {
-  const cover = book.cover ? { uri: book.cover!.medium } : undefined;
-
   function handleSelectItem() {
     useStore.getState().setSelectedItem(book);
     router.push("/bookPage");
   }
 
+  const coverUri = book.current_edition.cover
+    ? book.current_edition.cover!.medium
+    : undefined;
+  const [hasCover, setHasCover] = useState(coverUri ? true : false);
+
   return (
     <Pressable onPress={handleSelectItem} style={styles.card}>
       <View style={styles.coverContainer}>
-        {cover && (
-          <ImageBackground
-            source={cover}
-            resizeMode="cover"
-            style={styles.cover}
-          ></ImageBackground>
-        )}
+        <ImageBackground
+          source={
+            hasCover
+              ? { uri: coverUri }
+              : require("../../../assets/cover-placeholder.png")
+          }
+          onError={() => setHasCover(false)}
+          resizeMode="cover"
+          style={styles.cover}
+        ></ImageBackground>
       </View>
       <View style={styles.info}>
         <View>
@@ -64,23 +71,6 @@ export default function BookPressable({
           <Text color="quiet" variant="small">
             Source : {book.source}
           </Text>
-          {/* {book.isbn.map((isbn, i) => (
-            <View key={`${book.title}-isbn-${i}`}>
-              <Text color="quiet" variant="small">
-                ---
-              </Text>
-              <Text color="quiet" variant="small">
-                ISBN-10 :{" "}
-                {isbn.isbn_10.value &&
-                  `${isbn.isbn_10.value} (${isbn.isbn_10.source})`}
-              </Text>
-              <Text color="quiet" variant="small">
-                ISBN-13 :{" "}
-                {isbn.isbn_13.value &&
-                  `${isbn.isbn_13.value} (${isbn.isbn_13.source})`}
-              </Text>
-            </View>
-          ))} */}
         </View>
       </View>
     </Pressable>
@@ -94,7 +84,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   coverContainer: {
-    backgroundColor: Colors.surface.surface,
     width: 87,
     height: 139,
     borderRadius: 4,

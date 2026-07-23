@@ -6,44 +6,81 @@ import Button from "../Button";
 import Text from "../Text";
 import Dot from "../Dot";
 
-export default function BookPresentation({
+/**
+ * Entête de la page d'un livre, présentant l'édition actuelle et un carousel pour faire défiler les éditions
+ * @param {BookOverview} book - Livre
+ * @param {number} nbEditions - Nombre d'édition du livre
+ * @param {number} indexCurrentEdition - Index de l'édition actuelle dans le tableau d'objet Edition dans le livre
+ * @param {(i: number) => void} setIndexCurrentEdition - Setter de l'index de l'édition actuelle, manipulé via le carousel
+ * @returns 
+ */
+export default function Presentation({
   book,
   nbEditions,
+  indexCurrentEdition,
+  setIndexCurrentEdition,
 }: {
   book: BookOverview;
   nbEditions: number;
+  indexCurrentEdition: number;
+  setIndexCurrentEdition: (i: number) => void;
 }) {
-  const coverUri = book.cover?.large;
+  const [coverUri, setCoverUri] = useState(
+    book.editions[indexCurrentEdition].cover ? book.editions[indexCurrentEdition].cover!.large : undefined,
+  );
+  const [hasCover, setHasCover] = useState(coverUri ? true : false);
+
+  const [metadata, setMetadata] = useState(
+    [
+      book.editions[indexCurrentEdition].pages
+        ? `${book.current_edition.pages} pages`
+        : null,
+      book.editions[indexCurrentEdition].publisher,
+      book.editions[indexCurrentEdition].date,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  );
 
   const [ratio, setRatio] = useState(1);
 
-  const [currentEdition, setCurrentEdition] = useState(0);
-
   useEffect(() => {
-    let cancelled = false;
+    // Nouvelle couverture
+    const newCover = book.editions[indexCurrentEdition].cover ? book.editions[indexCurrentEdition].cover!.large : undefined;
 
-    if (coverUri) {
-      Image.getSize(coverUri, (width, height) => {
-        if (!cancelled) {
-          setRatio(width / height);
-        }
+    setCoverUri(newCover);
+    setHasCover(newCover ? true : false);
+
+    // Calculer le ratio de l'image
+    if (newCover) {
+      Image.getSize(newCover, (width, height) => {
+        setRatio(width / height);
       });
     }
 
-    return () => {
-      cancelled = true;
-    };
-  }, [coverUri]);
+    // Données relatives à l'édition
+    setMetadata(
+      [
+        book.editions[indexCurrentEdition].pages
+          ? `${book.editions[indexCurrentEdition].pages} pages`
+          : null,
+        book.editions[indexCurrentEdition].publisher,
+        book.editions[indexCurrentEdition].date,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+    );
+  }, [indexCurrentEdition])
 
   function previousEdition() {
-    setCurrentEdition(
-      currentEdition === 0 ? nbEditions - 1 : currentEdition - 1,
+    setIndexCurrentEdition(
+      indexCurrentEdition === 0 ? nbEditions - 1 : indexCurrentEdition - 1,
     );
   }
 
   function nextEdition() {
-    setCurrentEdition(
-      currentEdition === nbEditions - 1 ? 0 : currentEdition + 1,
+    setIndexCurrentEdition(
+      indexCurrentEdition === nbEditions - 1 ? 0 : indexCurrentEdition + 1,
     );
   }
 
@@ -51,7 +88,7 @@ export default function BookPresentation({
 
   const start = Math.max(
     0,
-    Math.min(currentEdition - 2, nbEditions - visibleCount),
+    Math.min(indexCurrentEdition - 2, nbEditions - visibleCount),
   );
 
   const end = Math.min(start + visibleCount, nbEditions);
@@ -62,12 +99,15 @@ export default function BookPresentation({
   return (
     <View style={styles.container.container}>
       <View style={styles.book.book}>
-        {coverUri && (
-          <Image
-            source={{ uri: coverUri }}
-            style={[styles.book.cover, { aspectRatio: ratio }]}
-          />
-        )}
+        <Image
+          source={
+            hasCover
+              ? { uri: coverUri }
+              : require("../../../assets/cover-placeholder.png")
+          }
+          onError={() => setHasCover(false)}
+          style={[styles.book.cover, !hasCover ? styles.book.placeholderCover : null, { aspectRatio: ratio }]}
+        />
 
         <View style={styles.book.infos}>
           <View>
@@ -97,6 +137,9 @@ export default function BookPresentation({
               </Text>
             ))}
           </View>
+          <Text color="inverse" variant="small">
+            {metadata}
+          </Text>
         </View>
       </View>
       {nbEditions != 0 && (
@@ -123,7 +166,9 @@ export default function BookPresentation({
                 return (
                   <Dot
                     key={index}
-                    status={index === currentEdition ? "current" : "default"}
+                    status={
+                      index === indexCurrentEdition ? "current" : "default"
+                    }
                   />
                 );
               })}
@@ -159,6 +204,9 @@ const styles = {
     cover: {
       width: 113,
       borderRadius: 4,
+    },
+    placeholderCover: {
+      height: 179
     },
     infos: {
       flexDirection: "column",

@@ -36,7 +36,7 @@ export async function searchBookOpenLibrary(title: string) {
 /**
  * Cherche les éditions d'un livre via un ID
  * @param {string} workID L'ID du livre (ensemble des étidions d'un même livre)
- * @returns 
+ * @returns
  */
 export async function searchEditionsOpenLibrary(workID: string) {
   const url = `https://openlibrary.org${workID}/editions.json`;

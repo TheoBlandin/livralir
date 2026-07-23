@@ -43,7 +43,12 @@ export type Edition = {
   isbn: {
     isbn_10?: string;
     isbn_13?: string;
-  }
+  };
+  cover?: Cover;
+  pages?: number;
+  publisher?: string;
+  date?: string;
+  summary?: string;
 };
 
 export type BookOverview = {
@@ -52,8 +57,7 @@ export type BookOverview = {
   authors?: string[];
   series_name?: string;
   series_position?: string;
-  cover?: Cover;
-  currentEdition: Edition;
+  current_edition: Edition;
   editions: Edition[];
   source: "openlibrary" | "bnf" | "both";
 };
