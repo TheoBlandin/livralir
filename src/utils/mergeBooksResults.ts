@@ -264,6 +264,7 @@ function createBook(candidate: BookCandidate): BookOverview {
               "-L.jpg?default=false",
           }
         : undefined,
+      infos: {}
   };
 
   return {
@@ -350,6 +351,7 @@ function mergeBook(existing: BookOverview, candidate: BookCandidate) {
                 "-L.jpg?default=false",
             }
           : undefined,
+      infos: {}
     };
 
     existing.editions.push(newEdition);

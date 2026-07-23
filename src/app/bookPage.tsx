@@ -1,3 +1,4 @@
+import Informations from "@/components/BookPage/Informations";
 import Presentation from "@/components/BookPage/Presentation";
 import Summary from "@/components/BookPage/Summary";
 import { Colors } from "@/constants/Colors";
@@ -76,8 +77,9 @@ export default function BookPage() {
             />
           </View>
         </ImageBackground>
-        <View style={styles.info_container}>
+        <View style={styles.body}>
           <Summary book={book} indexCurrentEdition={indexCurrentEdition} />
+          <Informations book={book} indexCurrentEdition={indexCurrentEdition} />
         </View>
       </View>
     )
@@ -94,7 +96,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 32,
   },
-  info_container: {
+  body: {
     marginTop: -16,
     gap: 16,
     padding: 16,

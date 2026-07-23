@@ -10,25 +10,6 @@ export type BookCandidate = {
   id: string;
 };
 
-// export type ISBN = {
-//   isbn_10: {
-//     value?: string;
-//     source: "openlibrary" | "bnf" | "both";
-//     id: {
-//       openLibrary?: string;
-//       bnf?: string;
-//     };
-//   };
-//   isbn_13: {
-//     value?: string;
-//     source: "openlibrary" | "bnf" | "both";
-//     id: {
-//       openLibrary?: string;
-//       bnf?: string;
-//     };
-//   };
-// };
-
 export type Cover = {
   small: string;
   medium: string;
@@ -45,10 +26,19 @@ export type Edition = {
     isbn_13?: string;
   };
   cover?: Cover;
-  pages?: number;
-  publisher?: string;
-  date?: string;
   summary?: string;
+  infos: {
+    publication?: string;
+    publisher?: string;
+    collection?: string;
+    pages?: number;
+    format?: string;
+    illustrators?: string[];
+    translators?: string[];
+    first_publication?: string;
+    country?: string;
+    vo_title?: string
+  }
 };
 
 export type BookOverview = {

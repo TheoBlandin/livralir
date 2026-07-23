@@ -32,11 +32,11 @@ export default function Presentation({
 
   const [metadata, setMetadata] = useState(
     [
-      book.editions[indexCurrentEdition].pages
-        ? `${book.current_edition.pages} pages`
+      book.editions[indexCurrentEdition].infos.pages
+        ? `${book.current_edition.infos.pages} pages`
         : null,
-      book.editions[indexCurrentEdition].publisher,
-      book.editions[indexCurrentEdition].date,
+      book.editions[indexCurrentEdition].infos.publisher,
+      book.editions[indexCurrentEdition].infos.publication,
     ]
       .filter(Boolean)
       .join(" · "),
@@ -61,11 +61,11 @@ export default function Presentation({
     // Données relatives à l'édition
     setMetadata(
       [
-        book.editions[indexCurrentEdition].pages
-          ? `${book.editions[indexCurrentEdition].pages} pages`
+        book.editions[indexCurrentEdition].infos.pages
+          ? `${book.editions[indexCurrentEdition].infos.pages} pages`
           : null,
-        book.editions[indexCurrentEdition].publisher,
-        book.editions[indexCurrentEdition].date,
+        book.editions[indexCurrentEdition].infos.publisher,
+        book.editions[indexCurrentEdition].infos.publication,
       ]
         .filter(Boolean)
         .join(" · "),
